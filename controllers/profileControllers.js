@@ -8,7 +8,7 @@ const path = require('path');
   
 exports.getUserProfile =async  (req, res) => {
     // req.user was set by authenticateToken middleware
-    const userId = req.user.user_id;
+    const userId = req.user.id;
     try{
         const query='select * from user_biodata where user_id=$1';
         const response=await db.query(query,[userId]);
@@ -32,7 +32,8 @@ exports.getUserProfile =async  (req, res) => {
         return value;
     }
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
+      console.log(req.user);
       const {
         firstname,
         lastname,
@@ -85,7 +86,7 @@ exports.getUserProfile =async  (req, res) => {
         console.error('Supabase PDF upload error:', pdfError);
         return res.status(500).json({ error: 'Failed to upload resume' });
       }
-      const { data: pdfPublicUrlData } = supabaseStorage.from(process.env.RESUME_BUCKET).getPublicUrl(pdfFileName);
+      const { data: pdfPublicUrlData } = await supabaseStorage.from(process.env.RESUME_BUCKET).getPublicUrl(pdfFileName);
       const resumeUrl = pdfPublicUrlData.publicUrl;
   
       // Upload image if present
@@ -93,7 +94,7 @@ exports.getUserProfile =async  (req, res) => {
       if (imageFile) {
         const imageFileName = `images/${Date.now()}_${imageFile.originalname}`;
         const { data: imageData, error: imageError } = await supabaseStorage
-          .from(process.env.IMAGE_BUCKET)
+          .from(process.env.USER_AVATAR_BUCKET)
           .upload(imageFileName, imageFile.buffer, {
             contentType: imageFile.mimetype,
             upsert: false,
@@ -102,21 +103,22 @@ exports.getUserProfile =async  (req, res) => {
           console.error('Supabase image upload error:', imageError);
           return res.status(500).json({ error: 'Failed to upload image' });
         }
-        const { data: imagePublicUrlData } = supabaseStorage.from(process.env.USER_AVATAR_BUCKET).getPublicUrl(imageFileName);
+        const { data: imagePublicUrlData } = await supabaseStorage.from(process.env.USER_AVATAR_BUCKET).getPublicUrl(imageFileName);
         imageUrl = imagePublicUrlData.publicUrl;
       }
-  
+      const resume_embed_string='['+resume_embed.join(',')+']';
       // Now save user profile data + resumeUrl + imageUrl + resume_embed to your DB if needed
       const insertQuery = `INSERT INTO user_biodata (
-        user_id, firstname, lastname, age, male, city, state, country,
-        tenth_percentage, twelfth_percentage, undergrad_cgpa, undergrad_institute,
-        postgrad_cgpa, postgrad_institute, undergrad_degree, postgrad_degree,
-        resume_url, image_url, resume_embed
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-        $11,$12,$13,$14,$15,$16,$17,$18,$19
-      )`;
-      
+  user_id, firstname, lastname, age, male, city, state, country,
+  "10th_percentage", "12_percentage", undergrad_cgpa, undergrad_institute,
+  postgrad_cgpa, postgrad_institute, undergrad_degree, postgrad_degree,
+  resume_link, user_avatar_link, resume_embed
+) VALUES (
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+  $11,$12,$13,$14,$15,$16,$17,$18,$19
+)
+`;
+      console.log(userId);
       const values = [
         userId,
         toNullIfEmpty(firstname),
@@ -136,7 +138,7 @@ exports.getUserProfile =async  (req, res) => {
         toNullIfEmpty(postgrad_degree),
         resumeUrl,
         imageUrl,
-        resume_embed,
+        resume_embed_string,
       ];
       
       await db.query(insertQuery, values);
@@ -151,7 +153,7 @@ exports.getUserProfile =async  (req, res) => {
     }
   };
   exports.getEmployerProfile=async (req,res)=>{
-        const employerId=req.user.employer_id;
+        const employerId=req.user.id;
         try{
             const query='select * from employer_biodata where employer_id=$1';
             const response=await db.query(query,[employerId]);
@@ -170,7 +172,7 @@ exports.getUserProfile =async  (req, res) => {
   };
   exports.setEmployerProfile = async (req, res) => {
     try {
-      const employerId = req.user.employer_id;
+      const employerId = req.user.id;
   
       const {
         firstname,
@@ -193,10 +195,10 @@ exports.getUserProfile =async  (req, res) => {
       }
   
       const file = req.file;
-      const ext = path.extname(file.originalname) || '.png';
-      const filename = `${employerId}/${uuidv4()}${ext}`;
-  
-      const { data, error } = await supabaseStorage
+      const ext = path.extname(file.originalname);
+      const filename = `${uuidv4()}${ext}`;
+      console.log("here");
+      const { data: imageData, error } = await  supabaseStorage
         .from(`${process.env.EMPLOYER_AVATAR_BUCKET}`)
         .upload(filename, file.buffer, {
           cacheControl: '3600',
@@ -208,16 +210,16 @@ exports.getUserProfile =async  (req, res) => {
         console.error('Supabase upload error:', error);
         return res.status(500).json({ message: "Failed to upload avatar image" });
       }
-  
-      const { publicURL, error: urlError } = supabaseStorage
-        .from('employer_avatars')
+      console.log(filename);
+      const { data:publicURLData, error: urlError } = await supabaseStorage
+        .from(`${process.env.EMPLOYER_AVATAR_BUCKET}`)
         .getPublicUrl(filename);
   
       if (urlError) {
         console.error('Supabase getPublicUrl error:', urlError);
         return res.status(500).json({ message: "Failed to get avatar public URL" });
       }
-  
+      const publicUrl=publicURLData.publicUrl;
       // Simple insert query
       const query = `
         INSERT INTO employer_biodata (
@@ -232,7 +234,7 @@ exports.getUserProfile =async  (req, res) => {
         lastname,
         maleBool,
         org,
-        publicURL,
+        publicUrl,
         city,
         state,
         country,

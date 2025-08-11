@@ -1,22 +1,23 @@
-const express=require('express');
 require('dotenv').config();
+const express = require('express');
+const authRouter = require('./routes/authRoutes.js');
 
-const app=express();
-const PORT=process.env.PORT;
+const app = express();
+const PORT = process.env.PORT;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const authRoutes=require('./routes/authRoutes.js');
-app.use('/auth',authRoutes);
-app.get('/',(req,res)=>{
-    res.send({message:"API IS ONLINE"});
 
+app.use('/api/auth', authRouter);
+
+app.get('/', (req, res) => {
+  res.send({ message: 'API IS ONLINE' });
 });
+
 app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'Route not found' });
 });
-  
-app.listen(PORT,()=>{
-    console.log(`Server running on Port ${PORT}`);
 
-})
-
+app.listen(PORT, () => {
+  console.log(`Server running on Port ${PORT}`);
+});

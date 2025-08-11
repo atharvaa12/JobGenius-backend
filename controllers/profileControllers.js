@@ -10,7 +10,7 @@ exports.getUserProfile =async  (req, res) => {
     // req.user was set by authenticateToken middleware
     const userId = req.user.id;
     try{
-        const query='select * from user_biodata where user_id=$1';
+        const query = 'select user_id, firstname, lastname, age, male, city, state, country,"10th_percentage", "12_percentage", undergrad_cgpa, postgrad_cgpa, undergrad_institute, postgrad_institute, resume_link, undergrad_degree, postgrad_degree, user_avatar_link from user_biodata where user_id=$1';
         const response=await db.query(query,[userId]);
         if(response.rows.length==0){
             res.status(404).json({message:"User Profile Not Found"});

@@ -6,7 +6,9 @@ const PORT=process.env.PORT;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const authRoutes=require('./routes/authRoutes.js');
+const profileRoutes=require('./routes/profileRoutes.js');
 app.use('/auth',authRoutes);
+app.use('/profile',profileRoutes);
 app.get('/',(req,res)=>{
     res.send({message:"API IS ONLINE"});
 

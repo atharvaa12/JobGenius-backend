@@ -20,7 +20,7 @@ exports.getUserProfile =async  (req, res) => {
         }
     }
     catch (error){
-        console.err(err);
+        console.log(error);
         res.status(500).json({message:"server error"});
     }
     

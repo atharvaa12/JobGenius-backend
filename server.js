@@ -1,25 +1,28 @@
 require('dotenv').config();
-const express=require('express');
-const app=express();
-const PORT=process.env.PORT;
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const authRoutes=require('./routes/authRoutes.js');
-const profileRoutes=require('./routes/profileRoutes.js');
-const jobRoutes=require('./routes/jobRoutes.js');
-app.use('/api/auth',authRoutes);
-app.use('/api/profile',profileRoutes);
-app.use('/api/jobs',jobRoutes);
-app.get('/',(req,res)=>{
-    res.send({message:"API IS ONLINE"});
 
+const authRoutes = require('./routes/authRoutes.js');
+const profileRoutes = require('./routes/profileRoutes.js');
+const jobRoutes = require('./routes/jobRoutes.js');
+const streamRoutes = require('./routes/streamRoutes.js');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/stream', streamRoutes);
+
+app.get('/', (req, res) => {
+  res.send({ message: 'API IS ONLINE' });
 });
 app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'Route not found' });
 });
-  
-app.listen(PORT,()=>{
-    console.log(`Server running on Port ${PORT}`);
 
-})
-
+app.listen(PORT, () => {
+  console.log(`Server running on Port ${PORT}`);
+});

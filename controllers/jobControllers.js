@@ -38,3 +38,18 @@ exports.createJobPost=async(req,res)=>{
 
     }
 };
+exports.showJobs=async(req,res)=>{
+  try{
+    const query=`SELECT j.job_id, j.title, j.created_at, j.created_at, j.max_applications, j.cur_applications, j.min_10th_percentage, j.min_12th_percentage,
+    e.org, e.org_avatar
+    FROM jobs j, employer_biodata e
+    where j.employer_id=e.employer_id AND j.active;
+    `;
+    const dbResponse=await db.query(query,[]);
+    res.json(dbResponse.rows);
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({message:"error showings job postings"});
+  }
+};

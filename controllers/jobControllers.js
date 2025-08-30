@@ -50,6 +50,19 @@ exports.showJobs=async(req,res)=>{
   }
   catch(err){
     console.log(err);
-    res.status(500).json({message:"error showings job postings"});
+    res.status(500).json({message:"error showing job postings"});
+  }
+};
+exports.applyToJob=async(req, res)=>{
+  try{
+    const user_id=req.user.id;
+    const {job_id}=req.body;
+    const query=`INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
+    const response=await db.query(query,[user_id,job_id,"pending"]);
+    res.json({message:"applied successfully"});
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({message:"error applying to job "});
   }
 };

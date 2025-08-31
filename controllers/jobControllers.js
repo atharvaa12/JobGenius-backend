@@ -48,19 +48,18 @@ exports.createJobPost = async (req, res) => {
 };
 exports.showJobs = async (req, res) => {
   try {
-    const {sort}=req.query;
+    const { sort } = req.query;
     let query = `SELECT j.job_id, j.title, j.created_at, j.created_at, j.max_applications, j.cur_applications, j.min_10th_percentage, j.min_12th_percentage,
     e.org, e.org_avatar
     FROM jobs j, employer_biodata e
     where j.employer_id=e.employer_id AND j.active
     `;
-    if(sort==='popular'){
-      query+=`ORDER BY cur_applications DESC`;
+    if (sort === 'popular') {
+      query += `ORDER BY cur_applications DESC`;
+    } else if (sort === 'recent') {
+      query += `ORDER BY created_at DESC`;
     }
-    else if(sort==='recent'){
-      query+=`ORDER BY created_at DESC`;
-    }
-    query+=`;`;
+    query += `;`;
     const dbResponse = await db.query(query, []);
     res.json(dbResponse.rows);
   } catch (err) {
@@ -72,12 +71,12 @@ exports.applyToJob = async (req, res) => {
   try {
     const user_id = req.user.id;
     const { job_id } = req.body;
-    
-    await db.withTransaction(async (client)=>{
+
+    await db.withTransaction(async (client) => {
       const query1 = `INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
       await client.query(query1, [user_id, job_id, 'pending']);
-      const query2=`UPDATE jobs SET cur_applications=cur_applications+1 WHERE job_id=$1`;
-      await client.query(query2,[job_id]);
+      const query2 = `UPDATE jobs SET cur_applications=cur_applications+1 WHERE job_id=$1`;
+      await client.query(query2, [job_id]);
     });
     res.json({ message: 'applied successfully' });
   } catch (err) {
@@ -147,5 +146,37 @@ exports.showJobsByUser = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Error fetching jobs for user' });
+  }
+};
+exports.showJobDetails = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return res.status(400).json({ message: 'Job ID is required' });
+    }
+
+    const query = `
+      SELECT j.job_id, j.title, j.body, j.created_at, j.terminate_at,
+             j.max_applications, j.cur_applications,
+             j.min_10th_percentage, j.min_12th_percentage,
+             j.active,
+             e.org, e.org_avatar, e.firstname AS employer_firstname, e.lastname AS employer_lastname,
+             e.city AS employer_city, e.state AS employer_state, e.country AS employer_country
+      FROM jobs j
+      JOIN employer_biodata e ON j.employer_id = e.employer_id
+      WHERE j.job_id = $1
+    `;
+
+    const dbResponse = await db.query(query, [jobId]);
+
+    if (dbResponse.rows.length === 0) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    res.status(200).json(dbResponse.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching job details' });
   }
 };

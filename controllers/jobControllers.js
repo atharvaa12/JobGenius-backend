@@ -1,68 +1,138 @@
-const db=require('../utils/db');
-const axios=require('axios');
-exports.createJobPost=async(req,res)=>{
-    try{
-       const employerId=req.user.id;
-       //console.log(req.body);
-       let {
-        title,
-        body,
-        terminate_at,
-        max_applications,
-        min_10th,
-        min_12th,
-        
-       }=req.body;
-       terminate_at = terminate_at === "" || terminate_at===undefined? null : terminate_at;
-       min_10th = min_10th === ""   || min_10th===undefined?null : Number(min_10th);
-       min_12th = min_12th === ""  || min_12th===undefined ? null : Number(min_12th);
-       max_applications=max_applications==="" || max_applications===undefined ?null:Number(max_applications);
+const db = require('../utils/db');
+const axios = require('axios');
+exports.createJobPost = async (req, res) => {
+  try {
+    const employerId = req.user.id;
+    //console.log(req.body);
+    let { title, body, terminate_at, max_applications, min_10th, min_12th } =
+      req.body;
+    terminate_at =
+      terminate_at === '' || terminate_at === undefined ? null : terminate_at;
+    min_10th =
+      min_10th === '' || min_10th === undefined ? null : Number(min_10th);
+    min_12th =
+      min_12th === '' || min_12th === undefined ? null : Number(min_12th);
+    max_applications =
+      max_applications === '' || max_applications === undefined
+        ? null
+        : Number(max_applications);
 
-       const body_response=await axios.post(`${process.env.VOYAGE_AI_API}/embed-text`,{text:body});
-       const body_embed='['+body_response.data.embedding.join(',')+']';
-       
-       const query = `
+    const body_response = await axios.post(
+      `${process.env.VOYAGE_AI_API}/embed-text`,
+      { text: body }
+    );
+    const body_embed = '[' + body_response.data.embedding.join(',') + ']';
+
+    const query = `
       INSERT INTO jobs (
         employer_id, title, body, job_embed, terminate_at,
         max_applications, min_10th_percentage, min_12th_percentage
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
     `;
-      await db.query(query,[employerId,title,body,body_embed,terminate_at,max_applications,min_10th,min_12th]);
-       res.status(200).json({message:"added job sucessfully"});
-
-    }
-    catch(error){
-        console.log(error);
-        res.status(500).json({message:"error creating job post"});
-
-    }
+    await db.query(query, [
+      employerId,
+      title,
+      body,
+      body_embed,
+      terminate_at,
+      max_applications,
+      min_10th,
+      min_12th,
+    ]);
+    res.status(200).json({ message: 'added job sucessfully' });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'error creating job post' });
+  }
 };
-exports.showJobs=async(req,res)=>{
-  try{
-    const query=`SELECT j.job_id, j.title, j.created_at, j.created_at, j.max_applications, j.cur_applications, j.min_10th_percentage, j.min_12th_percentage,
+exports.showJobs = async (req, res) => {
+  try {
+    const query = `SELECT j.job_id, j.title, j.created_at, j.created_at, j.max_applications, j.cur_applications, j.min_10th_percentage, j.min_12th_percentage,
     e.org, e.org_avatar
     FROM jobs j, employer_biodata e
     where j.employer_id=e.employer_id AND j.active;
     `;
-    const dbResponse=await db.query(query,[]);
+    const dbResponse = await db.query(query, []);
     res.json(dbResponse.rows);
-  }
-  catch(err){
+  } catch (err) {
     console.log(err);
-    res.status(500).json({message:"error showing job postings"});
+    res.status(500).json({ message: 'error showing job postings' });
   }
 };
-exports.applyToJob=async(req, res)=>{
-  try{
-    const user_id=req.user.id;
-    const {job_id}=req.body;
-    const query=`INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
-    const response=await db.query(query,[user_id,job_id,"pending"]);
-    res.json({message:"applied successfully"});
-  }
-  catch(err){
+exports.applyToJob = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const { job_id } = req.body;
+    const query = `INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
+    const response = await db.query(query, [user_id, job_id, 'pending']);
+    res.json({ message: 'applied successfully' });
+  } catch (err) {
     console.log(err);
-    res.status(500).json({message:"error applying to job "});
+    res.status(500).json({ message: 'error applying to job ' });
+  }
+};
+exports.showJobsByEmployer = async (req, res) => {
+  try {
+    const { employerId } = req.params;
+    const { active } = req.query;
+
+    if (!employerId) {
+      return res.status(400).json({ message: 'Employer ID is required' });
+    }
+
+    let query = `
+      SELECT j.job_id, j.title, j.body, j.created_at, j.terminate_at,
+             j.max_applications, j.cur_applications,
+             j.min_10th_percentage, j.min_12th_percentage,
+             j.active, e.org, e.org_avatar
+      FROM jobs j
+      JOIN employer_biodata e ON j.employer_id = e.employer_id
+      WHERE j.employer_id = $1
+    `;
+    const params = [employerId];
+
+    if (active === 'true') {
+      query += ` AND j.active = true`;
+    } else if (active === 'false') {
+      query += ` AND j.active = false`;
+    }
+
+    query += ` ORDER BY j.created_at DESC`;
+
+    const dbResponse = await db.query(query, params);
+    res.status(200).json(dbResponse.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching jobs for employer' });
+  }
+};
+exports.showJobsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const query = `
+      SELECT a.application_id, a.status, a.job_id,
+             j.title, j.body, j.created_at, j.terminate_at,
+             j.max_applications, j.cur_applications,
+             j.min_10th_percentage, j.min_12th_percentage,
+             j.active,
+             e.org, e.org_avatar
+      FROM applications a
+      JOIN jobs j ON a.job_id = j.job_id
+      JOIN employer_biodata e ON j.employer_id = e.employer_id
+      WHERE a.user_id = $1
+      ORDER BY j.created_at DESC;
+    `;
+
+    const dbResponse = await db.query(query, [userId]);
+    res.status(200).json(dbResponse.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching jobs for user' });
   }
 };

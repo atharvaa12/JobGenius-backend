@@ -48,11 +48,19 @@ exports.createJobPost = async (req, res) => {
 };
 exports.showJobs = async (req, res) => {
   try {
-    const query = `SELECT j.job_id, j.title, j.created_at, j.created_at, j.max_applications, j.cur_applications, j.min_10th_percentage, j.min_12th_percentage,
+    const {sort}=req.query;
+    let query = `SELECT j.job_id, j.title, j.created_at, j.created_at, j.max_applications, j.cur_applications, j.min_10th_percentage, j.min_12th_percentage,
     e.org, e.org_avatar
     FROM jobs j, employer_biodata e
-    where j.employer_id=e.employer_id AND j.active;
+    where j.employer_id=e.employer_id AND j.active
     `;
+    if(sort==='popular'){
+      query+=`ORDER BY cur_applications DESC`;
+    }
+    else if(sort==='recent'){
+      query+=`ORDER BY created_at DESC`;
+    }
+    query+=`;`;
     const dbResponse = await db.query(query, []);
     res.json(dbResponse.rows);
   } catch (err) {
@@ -64,8 +72,13 @@ exports.applyToJob = async (req, res) => {
   try {
     const user_id = req.user.id;
     const { job_id } = req.body;
-    const query = `INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
-    const response = await db.query(query, [user_id, job_id, 'pending']);
+    
+    await db.withTransaction(async (client)=>{
+      const query1 = `INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
+      await client.query(query1, [user_id, job_id, 'pending']);
+      const query2=`UPDATE jobs SET cur_applications=cur_applications+1 WHERE job_id=$1`;
+      await client.query(query2,[job_id]);
+    });
     res.json({ message: 'applied successfully' });
   } catch (err) {
     console.log(err);

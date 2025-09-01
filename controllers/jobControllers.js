@@ -73,6 +73,11 @@ exports.applyToJob = async (req, res) => {
     const { job_id } = req.body;
 
     await db.withTransaction(async (client) => {
+      const checkQuery=`SELECT cur_applications, max_applications FROM jobs WHERE job_id=$1;`;
+      const checkResponse=await client.query(checkQuery,[job_id]);
+      if(checkResponse.rows.length===0 || checkResponse.rows[0].cur_applications+1>checkResponse.rows[0].max_applications){
+        throw new Error(`max_applications reached`);
+      }
       const query1 = `INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;
       await client.query(query1, [user_id, job_id, 'pending']);
       const query2 = `UPDATE jobs SET cur_applications=cur_applications+1 WHERE job_id=$1`;
@@ -178,5 +183,57 @@ exports.showJobDetails = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Error fetching job details' });
+  }
+};
+exports.showJobApplicants=async (req,res)=>{
+      const job_id=req.params.jobId;
+      
+      try{
+        const query=`SELECT job_embed FROM jobs WHERE job_id=$1;`
+        const response=await db.query(query,[job_id]);
+       // console.log(response);
+        const {job_embed}=response.rows[0];
+        console.log(typeof job_embed);
+        const job_embed_string=job_embed;
+      
+        let matchQuery=`SELECT u.user_id, u.user_avatar_link, u.firstname, u.lastname, 1-(u.resume_embed <=> $2::vector) as similarity
+        FROM applications a, user_biodata u
+        WHERE a.job_id=$1 AND a.user_id=u.user_id ORDER BY similarity DESC;`
+        const  applicants=await db.query(matchQuery,[job_id,job_embed_string]);
+        res.status(200).json(applicants.rows);        
+        
+
+      }
+      catch(err){
+        console.log(err);
+        res.status(500).json({message:"error fetching applicants"});
+      }
+};
+exports.showJobsByTitle=async(req,res)=>{
+  const search=req.params.title;
+  try{
+          const query=`SELECT 
+          j.job_id, 
+          j.title, 
+          j.body,
+          e.org_avatar,
+          ts_rank(
+              setweight(to_tsvector('english', j.title), 'A') ||
+              setweight(to_tsvector('english', j.body), 'B'),
+              plainto_tsquery('english', $1)
+          ) AS rank
+      FROM jobs j
+      JOIN employer_biodata e ON j.employer_id = e.employer_id
+      WHERE (to_tsvector('english', j.title) || to_tsvector('english', j.body))
+            @@ plainto_tsquery('english', $1)
+      ORDER BY rank DESC
+      LIMIT 20;`
+      const result = await db.query(query,[search]);
+      res.status(200).json(result.rows);
+
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({message:"error fetching jobs"});
   }
 };

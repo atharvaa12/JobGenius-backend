@@ -9,4 +9,6 @@ router.get('/showjobs/:jobId', jobControllers.showJobDetails);
 router.post('/apply', jobControllers.applyToJob);
 router.get('/showjobs/employer/:employerId', jobControllers.showJobsByEmployer);
 router.get('/showjobs/user/:userId', jobControllers.showJobsByUser);
+router.get('/showapplicants/:jobId',jobControllers.showJobApplicants);
+router.get('/search/:title',jobControllers.showJobsByTitle);
 module.exports = router;

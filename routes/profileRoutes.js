@@ -24,5 +24,6 @@ router.post(
     upload.single('org_avatar'),   // multer middleware for single image file named 'logo'
     profileControllers.setEmployerProfile
   );
-  
+router.get('/user/:userId',authenticateToken,profileControllers.getUserProfileForEmployer);
+
 module.exports = router;

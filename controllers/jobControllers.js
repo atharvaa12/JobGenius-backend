@@ -217,6 +217,7 @@ exports.showJobsByTitle=async(req,res)=>{
           j.title, 
           j.body,
           e.org_avatar,
+          e.org,
           ts_rank(
               setweight(to_tsvector('english', j.title), 'A') ||
               setweight(to_tsvector('english', j.body), 'B'),

@@ -238,3 +238,21 @@ exports.showJobsByTitle=async(req,res)=>{
     res.status(500).json({message:"error fetching jobs"});
   }
 };
+exports.checkIfApplied=async(req,res)=>{
+  try{
+      const user_id=req.params.userId;
+      const job_id=req.params.jobId;
+      const query=`SELECT * FROM applications WHERE user_id=$1 AND job_id=$2;`
+      const response=await db.query(query,[user_id,job_id]);
+      let alreadyApplied=true;
+      if(response.rows.length===0){
+        alreadyApplied=false;
+      }
+      res.json({applied:alreadyApplied});
+
+  }
+  catch(err){
+      console.log(err);
+      res.status(500).json({message:"error checking if applied"});
+  }
+}

@@ -11,4 +11,5 @@ router.get('/showjobs/employer/:employerId', jobControllers.showJobsByEmployer);
 router.get('/showjobs/user/:userId', jobControllers.showJobsByUser);
 router.get('/showapplicants/:jobId',jobControllers.showJobApplicants);
 router.get('/search/:title',jobControllers.showJobsByTitle);
+router.get('/checkapplied/:userId/:jobId',jobControllers.checkIfApplied);
 module.exports = router;

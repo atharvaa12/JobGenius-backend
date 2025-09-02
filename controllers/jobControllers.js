@@ -196,7 +196,7 @@ exports.showJobApplicants=async (req,res)=>{
         console.log(typeof job_embed);
         const job_embed_string=job_embed;
       
-        let matchQuery=`SELECT u.user_id, u.user_avatar_link, u.firstname, u.lastname, 1-(u.resume_embed <=> $2::vector) as similarity
+        let matchQuery=`SELECT u.user_id, u.user_avatar_link, u.resume_link, u.firstname, u.lastname, 1-(u.resume_embed <=> $2::vector) as similarity
         FROM applications a, user_biodata u
         WHERE a.job_id=$1 AND a.user_id=u.user_id ORDER BY similarity DESC;`
         const  applicants=await db.query(matchQuery,[job_id,job_embed_string]);

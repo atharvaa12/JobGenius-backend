@@ -198,7 +198,7 @@ exports.showJobApplicants=async (req,res)=>{
       
         let matchQuery=`SELECT u.user_id, u.user_avatar_link, u.resume_link, u.firstname, u.lastname, 1-(u.resume_embed <=> $2::vector) as similarity
         FROM applications a, user_biodata u
-        WHERE a.job_id=$1 AND a.user_id=u.user_id ORDER BY similarity DESC;`
+        WHERE a.job_id=$1 AND a.status!='rejected' AND a.user_id=u.user_id ORDER BY similarity DESC;`
         const  applicants=await db.query(matchQuery,[job_id,job_embed_string]);
         res.status(200).json(applicants.rows);        
         
@@ -256,3 +256,44 @@ exports.checkIfApplied=async(req,res)=>{
       res.status(500).json({message:"error checking if applied"});
   }
 }
+exports.removeApplicant=async (req,res)=>{
+    const user_id=req.params.userId;
+    const job_id=req.params.jobId;
+    const employer_id=req.user.id;
+
+    try{
+        const checkQuery=`SELECT a.user_id, a.job_id FROM 
+        jobs j, applications a 
+        WHERE j.employer_id=$1 AND j.job_id=$2 AND a.job_id=$2 AND a.user_id=$3;`
+        const checkResponse=await db.query(checkQuery,[employer_id,job_id,user_id]);
+        if(checkResponse.rows.length===0){
+          res.status(500).json({message:" security error"});
+        }
+        const query=`UPDATE applications
+        SET status='rejected' 
+        WHERE user_id=$1 AND job_id=$2;
+        `
+        const response=await db.query(query, [user_id,job_id]);
+        res.status(200).json({message:"removed successfully"});
+    }
+    catch(err){
+      console.log(err);
+      res.status(500).json({message:"error removing applicant"});
+    }
+};
+exports.removeJob=async (req, res)=>{
+    const job_id=req.params.jobId;
+    const employer_id=req.user.id;
+    try{
+        const query=`UPDATE jobs
+        SET active=false
+        WHERE job_id=$1 AND employer_id=$2;`
+        const response=await db.query(query,[job_id,employer_id]);
+        res.status(200).json({message:"removed successfully"});
+
+    }
+    catch(err){
+      console.log(err);
+      res.status(500).json({message:"error removing job"});
+    }
+};

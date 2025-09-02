@@ -12,4 +12,6 @@ router.get('/showjobs/user/:userId', jobControllers.showJobsByUser);
 router.get('/showapplicants/:jobId',jobControllers.showJobApplicants);
 router.get('/search/:title',jobControllers.showJobsByTitle);
 router.get('/checkapplied/:userId/:jobId',jobControllers.checkIfApplied);
+router.patch('/removeapplicant/:userId/:jobId',jobControllers.removeApplicant);
+router.patch('/removejob/:jobId',jobControllers.removeJob);
 module.exports = router;

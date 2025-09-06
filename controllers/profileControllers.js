@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const axios = require('axios');
 const FormData = require('form-data');
 const supabaseStorage = require('../utils/storage');
+const { upsertStreamUser } = require('../utils/stream');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
@@ -53,6 +54,7 @@ exports.getUserProfileForEmployer = async (req, res) => {
     res.status(500).json({ message: 'server error' });
   }
 };
+
 exports.getUserProfile = async (req, res) => {
   // req.user was set by authenticateToken middleware
   const userId = req.user.id;
@@ -192,6 +194,17 @@ exports.setUserProfile = async (req, res) => {
 
     await db.query(insertQuery, values);
 
+    try {
+      await upsertStreamUser({
+        id: userId.toString(),
+        name: `${firstname} ${lastname}`,
+        image: imageUrl || '',
+      });
+      console.log('Stream user created/updated successfully');
+    } catch (streamError) {
+      console.error('Stream user upsert error:', streamError);
+    }
+
     return res.status(200).json({
       message: 'Profile updated successfully',
     });
@@ -200,6 +213,7 @@ exports.setUserProfile = async (req, res) => {
     return res.status(500).json({ message: 'Error creating profile' });
   }
 };
+
 exports.getEmployerProfile = async (req, res) => {
   const employerId = req.user.id;
   try {
@@ -211,7 +225,7 @@ exports.getEmployerProfile = async (req, res) => {
       res.json(response.rows[0]);
     }
   } catch (error) {
-    console.log(err);
+    console.log(error);
     res.status(500).json({ message: 'server error' });
   }
 };
@@ -283,6 +297,17 @@ exports.setEmployerProfile = async (req, res) => {
 
     const result = await db.query(query, values);
 
+    try {
+      await upsertStreamUser({
+        id: employerId.toString(),
+        name: `${firstname} ${lastname}`,
+        image: publicUrl || '',
+      });
+      console.log('Stream employer user created/updated successfully');
+    } catch (streamError) {
+      console.error('Stream user upsert error for employer:', streamError);
+    }
+    
     res.status(201).json({
       message: 'Employer profile created successfully',
       profile: result.rows[0],

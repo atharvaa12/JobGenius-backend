@@ -51,8 +51,23 @@ async function query(text, params = [], retries = 3) {
     throw err; // rethrow if no retries left or not a transient error
   }
 }
+async function withTransaction(callback) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK'); // if this fails, it'll throw up naturally
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
 module.exports = {
   query,
+  withTransaction,
   pool,
 };

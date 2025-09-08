@@ -133,7 +133,7 @@ exports.showJobsByUser = async (req, res) => {
     }
 
     const query = `
-      SELECT a.application_id, a.status, a.job_id,
+      SELECT a.application_id, a.status, j.employer_id, a.job_id,
              j.title, j.body, j.created_at, j.terminate_at,
              j.max_applications, j.cur_applications,
              j.min_10th_percentage, j.min_12th_percentage,

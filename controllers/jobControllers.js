@@ -75,7 +75,7 @@ exports.applyToJob = async (req, res) => {
     await db.withTransaction(async (client) => {
       const checkQuery=`SELECT cur_applications, max_applications FROM jobs WHERE job_id=$1;`;
       const checkResponse=await client.query(checkQuery,[job_id]);
-      if(checkResponse.rows.length===0 || checkResponse.rows[0].cur_applications+1>checkResponse.rows[0].max_applications){
+      if(checkResponse.rows.length===0 || ( checkResponse.rows[0].max_applications!=null && checkResponse.rows[0].cur_applications+1>checkResponse.rows[0].max_applications)){
         throw new Error(`max_applications reached`);
       }
       const query1 = `INSERT INTO applications (user_id, job_id, status) VALUES ($1,$2,$3) `;

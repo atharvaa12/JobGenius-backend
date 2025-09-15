@@ -122,7 +122,7 @@ exports.setUserProfile = async (req, res) => {
     const resume_embed = embedResponse.data.embedding;
 
     // Upload PDF to Supabase Storage
-    const pdfFileName = `resumes/${Date.now()}_${pdfFile.originalname}`;
+    const pdfFileName = `resumes/${Date.now()}_${uuidv4()}`;
     const { data: pdfData, error: pdfError } = await supabaseStorage
       .from(process.env.RESUME_BUCKET)
       .upload(pdfFileName, pdfFile.buffer, {

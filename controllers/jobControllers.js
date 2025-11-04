@@ -298,28 +298,35 @@ exports.removeJob=async (req, res)=>{
     }
 };
 exports.getSuggestions=async(req,res)=>{
-  const job_id=req.params.jobId;
+  const user_id=req.params.userId;
   try{
-      const queryForJobEmbed=`select job_embed from jobs where job_id=$1::uuid`;
+      const queryForJobEmbed=`select resume_embed from user_biodata where user_id=$1::uuid`;
      
-      const response=await db.query(queryForJobEmbed,[job_id]);
+      const response=await db.query(queryForJobEmbed,[user_id]);
      // console.log("success");
-      const {job_embed}=response.rows[0];
-        const matchQuery = `
-    SELECT 
-      u.user_id, 
-      u.user_avatar_link, 
-      u.resume_link, 
-      u.firstname, 
-      u.lastname, 
-      1 - (u.resume_embed <=> $1::vector) AS similarity
-    FROM user_biodata u
-    WHERE (1 - (u.resume_embed <=> $1::vector)) >= 0.75
-    ORDER BY similarity DESC;
-  `;
+      const {resume_embed}=response.rows[0];
+       const matchQuery = `
+  SELECT 
+    j.job_id,
+    j.employer_id,
+    j.title,
+    j.body,
+    j.created_at,
+    j.max_applications,
+    j.cur_applications,
+    j.min_10th_percentage,
+    j.min_12th_percentage,
+    j.terminate_at,
+    1 - (j.job_embed <=> $1::vector) AS similarity
+  FROM jobs j
+  WHERE now()<j.terminate_at AND j.active=true
+  ORDER BY similarity DESC
+  LIMIT 10;
+`;
 
-const suggestions = await db.query(matchQuery, [job_embed]);
-res.status(200).json(suggestions.rows);
+const results = await db.query(matchQuery, [resume_embed]);
+res.status(200).json(results.rows);
+
 
   }
   catch(err){

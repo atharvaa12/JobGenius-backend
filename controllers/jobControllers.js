@@ -297,41 +297,44 @@ exports.removeJob=async (req, res)=>{
       res.status(500).json({message:"error removing job"});
     }
 };
-exports.getSuggestions=async(req,res)=>{
-  const user_id=req.params.userId;
-  try{
-      const queryForJobEmbed=`select resume_embed from user_biodata where user_id=$1::uuid`;
-     
-      const response=await db.query(queryForJobEmbed,[user_id]);
-     // console.log("success");
-      const {resume_embed}=response.rows[0];
-       const matchQuery = `
-  SELECT 
-    j.job_id,
-    j.org_avatar,
-    j.employer_id,
-    j.title,
-    j.body,
-    j.created_at,
-    j.max_applications,
-    j.cur_applications,
-    j.min_10th_percentage,
-    j.min_12th_percentage,
-    j.terminate_at,
-    1 - (j.job_embed <=> $1::vector) AS similarity
-  FROM jobs j
-  WHERE now()<j.terminate_at AND j.active=true
-  ORDER BY similarity DESC
-  LIMIT 10;
-`;
+exports.getSuggestions = async (req, res) => {
+  const user_id = req.params.userId;
+  try {
+    const queryForJobEmbed = `
+      SELECT resume_embed 
+      FROM user_biodata 
+      WHERE user_id = $1::uuid
+    `;
+    
+    const response = await db.query(queryForJobEmbed, [user_id]);
+    const { resume_embed } = response.rows[0];
 
-const results = await db.query(matchQuery, [resume_embed]);
-res.status(200).json(results.rows);
+    const matchQuery = `
+      SELECT 
+        j.job_id,
+        j.employer_id,
+        j.title,
+        j.body,
+        j.created_at,
+        j.max_applications,
+        j.cur_applications,
+        j.min_10th_percentage,
+        j.min_12th_percentage,
+        j.terminate_at,
+        e.org_avatar,
+        1 - (j.job_embed <=> $1::vector) AS similarity
+      FROM jobs j
+      JOIN employer_biodata e ON j.employer_id = e.employer_id
+      WHERE now() < j.terminate_at 
+        AND j.active = true
+      ORDER BY similarity DESC
+      LIMIT 10;
+    `;
 
-
+    const results = await db.query(matchQuery, [resume_embed]);
+    res.status(200).json(results.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "error getting suggestions" });
   }
-  catch(err){
-    console.log(err);
-    res.status(500).json({message:"error getting suggestions"});
-  }
-}
+};

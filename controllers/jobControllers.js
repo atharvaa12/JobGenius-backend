@@ -297,3 +297,33 @@ exports.removeJob=async (req, res)=>{
       res.status(500).json({message:"error removing job"});
     }
 };
+exports.getSuggestions=async(req,res)=>{
+  const job_id=req.params.jobId;
+  try{
+      const queryForJobEmbed=`select job_embed from jobs where job_id=$1::uuid`;
+     
+      const response=await db.query(queryForJobEmbed,[job_id]);
+     // console.log("success");
+      const {job_embed}=response.rows[0];
+        const matchQuery = `
+    SELECT 
+      u.user_id, 
+      u.user_avatar_link, 
+      u.resume_link, 
+      u.firstname, 
+      u.lastname, 
+      1 - (u.resume_embed <=> $1::vector) AS similarity
+    FROM user_biodata u
+    WHERE (1 - (u.resume_embed <=> $1::vector)) >= 0.75
+    ORDER BY similarity DESC;
+  `;
+
+const suggestions = await db.query(matchQuery, [job_embed]);
+res.status(200).json(suggestions.rows);
+
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({message:"error getting suggestions"});
+  }
+}

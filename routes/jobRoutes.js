@@ -14,4 +14,5 @@ router.get('/search/:title',jobControllers.showJobsByTitle);
 router.get('/checkapplied/:userId/:jobId',jobControllers.checkIfApplied);
 router.patch('/removeapplicant/:userId/:jobId',jobControllers.removeApplicant);
 router.patch('/removejob/:jobId',jobControllers.removeJob);
+router.get('/getsuggestions/:jobId',jobControllers.getSuggestions);
 module.exports = router;

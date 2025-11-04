@@ -308,6 +308,7 @@ exports.getSuggestions=async(req,res)=>{
        const matchQuery = `
   SELECT 
     j.job_id,
+    j.org_avatar,
     j.employer_id,
     j.title,
     j.body,

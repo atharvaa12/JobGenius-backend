@@ -122,4 +122,7 @@ node server.js
 
 
 ---
+## 🔗 Related Repositories
+
+- Embedding Service: https://github.com/atharvaa12/Python-API-JobGenius
 
